@@ -1,0 +1,29 @@
+; Create a simple GUI
+Gui, Add, Text,, Job Portal
+Gui, Add, Text,, Choose an Option:
+Gui, Add, Button, gRegisterApplicant, Register as Applicant
+Gui, Add, Button, gRegisterEmployer, Register as Employer
+Gui, Add, Button, gLogin, Login
+Gui, Add, Button, gExit, Exit
+Gui, Show,, Job Portal
+Return
+
+; Define what happens when buttons are clicked
+RegisterApplicant:
+    ; Run your C++ executable for applicant registration
+    Run, "C:\Users\Mohak\OneDrive\Desktop\PP project\project5.exe" "applicant"
+    Return
+
+RegisterEmployer:
+    ; Run your C++ executable for employer registration
+    Run, "C:\Users\Mohak\OneDrive\Desktop\PP project\project5.exe" "employer"
+    Return
+
+Login:
+    ; Run your C++ executable for login (you can modify this to accept parameters if needed)
+    Run, "C:\Users\Mohak\OneDrive\Desktop\PP project\project5.exe"
+    Return
+
+Exit:
+    GuiClose:  ; This handles the close button (X) on the window
+    ExitApp
