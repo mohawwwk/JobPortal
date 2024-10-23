@@ -1,0 +1,293 @@
+#include <iostream>
+#include <string>
+#include <limits>
+#include <algorithm>
+
+using namespace std;
+
+const int MAX_JOBS = 10;
+const int MAX_USERS = 10;
+
+class User {
+protected:
+    string name;
+    string email;
+    string password;
+
+public:
+    User(const string& name, const string& email)
+        : name(name), email(email), password("default_password") {}
+
+    User(const string& name, const string& email, const string& password)
+        : name(name), email(email), password(password) {}
+
+    virtual void dashboard() = 0;
+
+    string getEmail() const { return email; }
+    string getPassword() const { return password; }
+};
+
+class Job {
+private:
+    string title;
+    string description;
+    string employerEmail;
+
+public:
+    Job(const string& title = "", const string& description = "", const string& employerEmail = "")
+        : title(title), description(description), employerEmail(employerEmail) {}
+
+    void displayJob() const {
+        cout << "Job Title: " << title << "\nDescription: " << description << "\nEmployer: " << employerEmail << "\n";
+    }
+
+    string getEmployerEmail() const { return employerEmail; }
+    string getTitle() const { return title; }
+    string getDescription() const { return description; }
+};
+
+class Applicant : public User {
+public:
+    Applicant(const string& name, const string& email, const string& password)
+        : User(name, email, password) {}
+
+    void searchJobs(Job jobs[], int jobCount) {
+        cout << "\nAvailable Jobs:\n";
+        for (int i = 0; i < jobCount; i++) {
+            jobs[i].displayJob();
+            cout << "-------------------------------------\n";
+        }
+    }
+
+    void searchJobs(Job jobs[], int jobCount, const string& keyword) {
+        cout << "\nJobs matching the keyword '" << keyword << "':\n";
+        for (int i = 0; i < jobCount; i++) {
+            if (jobs[i].getTitle().find(keyword) != string::npos ||
+                jobs[i].getDescription().find(keyword) != string::npos) {
+                jobs[i].displayJob();
+                cout << "-------------------------------------\n";
+            }
+        }
+    }
+
+    void dashboard() override {
+        cout << "Applicant Dashboard - " << name << "\n";
+    }
+};
+
+class Employer : public User {
+private:
+    Job postedJobs[MAX_JOBS];
+    int jobCount;
+
+public:
+    Employer(const string& name, const string& email, const string& password)
+        : User(name, email, password), jobCount(0) {}
+
+    void postJob(const string& title, const string& description) {
+        if (jobCount < MAX_JOBS) {
+            postedJobs[jobCount++] = Job(title, description, email);
+            cout << "Job posted successfully!\n";
+        } else {
+            cout << "Cannot post more jobs, limit reached.\n";
+        }
+    }
+
+    void postJob(const string& title, const string& description, const string& requirements) {
+        if (jobCount < MAX_JOBS) {
+            postedJobs[jobCount++] = Job(title, description + "\nRequirements: " + requirements, email);
+            cout << "Job with requirements posted successfully!\n";
+        } else {
+            cout << "Cannot post more jobs, limit reached.\n";
+        }
+    }
+
+    void viewPostedJobs() {
+        cout << "\nYour Posted Jobs:\n";
+        for (int i = 0; i < jobCount; i++) {
+            postedJobs[i].displayJob();
+            cout << "-------------------------------------\n";
+        }
+    }
+
+    void dashboard() override {
+        cout << "Employer Dashboard - " << name << "\n";
+    }
+};
+
+class JobPortal {
+private:
+    User* users[MAX_USERS];
+    Job jobs[MAX_JOBS];
+    int userCount;
+    int jobCount;
+
+public:
+    JobPortal() : userCount(0), jobCount(0) {}
+
+    void registerApplicant(const string& name, const string& email, const string& password) {
+        if (userCount < MAX_USERS) {
+            users[userCount++] = new Applicant(name, email, password);
+            cout << "Applicant registered successfully!\n";
+        } else {
+            cout << "Cannot register more users, limit reached.\n";
+        }
+    }
+
+    void registerEmployer(const string& name, const string& email, const string& password) {
+        if (userCount < MAX_USERS) {
+            users[userCount++] = new Employer(name, email, password);
+            cout << "Employer registered successfully!\n";
+        } else {
+            cout << "Cannot register more users, limit reached.\n";
+        }
+    }
+
+    User* login(const string& email, const string& password) {
+        for (int i = 0; i < userCount; i++) {
+            if (users[i]->getEmail() == email && users[i]->getPassword() == password) {
+                return users[i];
+            }
+        }
+        cout << "Invalid credentials.\n";
+        return nullptr;
+    }
+
+    void postJob(User* user, const string& title, const string& description) {
+        Employer* employer = dynamic_cast<Employer*>(user);
+        if (employer) {
+            employer->postJob(title, description);
+            if (jobCount < MAX_JOBS) {
+                jobs[jobCount++] = Job(title, description, user->getEmail());
+            }
+        } else {
+            cout << "Only employers can post jobs.\n";
+        }
+    }
+
+    void postJob(User* user, const string& title, const string& description, const string& requirements) {
+        Employer* employer = dynamic_cast<Employer*>(user);
+        if (employer) {
+            employer->postJob(title, description, requirements);
+            if (jobCount < MAX_JOBS) {
+                jobs[jobCount++] = Job(title, description + "\nRequirements: " + requirements, user->getEmail());
+            }
+        } else {
+            cout << "Only employers can post jobs.\n";
+        }
+    }
+
+    void viewJobs(User* user) {
+        Applicant* applicant = dynamic_cast<Applicant*>(user);
+        if (applicant) {
+            applicant->searchJobs(jobs, jobCount);
+        } else {
+            cout << "Only applicants can search jobs.\n";
+        }
+    }
+
+    void viewJobs(User* user, const string& keyword) {
+        Applicant* applicant = dynamic_cast<Applicant*>(user);
+        if (applicant) {
+            applicant->searchJobs(jobs, jobCount, keyword);
+        } else {
+            cout << "Only applicants can search jobs.\n";
+        }
+    }
+};
+
+int main() {
+    JobPortal portal;
+    User* currentUser = nullptr;
+    int choice;
+
+    do {
+        cout << "\n1. Register as Applicant\n2. Register as Employer\n3. Login\n4. Exit\n";
+        cout << "Enter your choice: ";
+        cin >> choice;
+
+        if (cin.fail() || choice < 1 || choice > 4) {
+            cout << "Invalid choice. Please enter a number between 1 and 4.\n";
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            continue;
+        }
+
+        cin.ignore();
+
+        if (choice == 1) {
+            string name, email, password;
+            cout << "Enter name: ";
+            getline(cin, name);
+            cout << "Enter email: ";
+            getline(cin, email);
+            cout << "Enter password: ";
+            getline(cin, password);
+            portal.registerApplicant(name, email, password);
+        } else if (choice == 2) {
+            string name, email, password;
+            cout << "Enter name: ";
+            getline(cin, name);
+            cout << "Enter email: ";
+            getline(cin, email);
+            cout << "Enter password: ";
+            getline(cin, password);
+            portal.registerEmployer(name, email, password);
+        } else if (choice == 3) {
+            string email, password;
+            cout << "Enter email: ";
+            getline(cin, email);
+            cout << "Enter password: ";
+            getline(cin, password);
+
+            currentUser = portal.login(email, password);
+            if (currentUser) {
+                currentUser->dashboard();
+
+                int dashboardChoice;
+                if (dynamic_cast<Employer*>(currentUser)) {
+                    do {
+                        cout << "\n1. Post Job\n2. View Posted Jobs\n3. Logout\nEnter choice: ";
+                        cin >> dashboardChoice;
+                        cin.ignore();
+                        if (dashboardChoice == 1) {
+                            string title, description, requirements;
+                            cout << "Enter job title: ";
+                            getline(cin, title);
+                            cout << "Enter job description: ";
+                            getline(cin, description);
+                            cout << "Enter job requirements (optional): ";
+                            getline(cin, requirements);
+
+                            if (requirements.empty()) {
+                                portal.postJob(currentUser, title, description);
+                            } else {
+                                portal.postJob(currentUser, title, description, requirements);
+                            }
+                        } else if (dashboardChoice == 2) {
+                            dynamic_cast<Employer*>(currentUser)->viewPostedJobs();
+                        }
+                    } while (dashboardChoice != 3);
+                } else if (dynamic_cast<Applicant*>(currentUser)) {
+                    do {
+                        cout << "\n1. View Jobs\n2. Search Jobs by Keyword\n3. Logout\nEnter choice: ";
+                        cin >> dashboardChoice;
+                        cin.ignore();
+                        if (dashboardChoice == 1) {
+                            portal.viewJobs(currentUser);
+                        } else if (dashboardChoice == 2) {
+                            string keyword;
+                            cout << "Enter keyword: ";
+                            getline(cin, keyword);
+                            portal.viewJobs(currentUser, keyword);
+                        }
+                    } while (dashboardChoice != 3);
+                }
+                currentUser = nullptr;
+            }
+        }
+    } while (choice != 4);
+
+    cout << "Exiting Job Portal.\n";
+    return 0;
+}
